@@ -5,9 +5,7 @@
 *.tfstate.*
 *.tfstate.backup
 
-# tfvars with secrets (keep .example checked in)
-terraform.tfvars
-services.tfvars
+# backend.tfvars is generated at runtime in CI from secrets; never commit
 backend.tfvars
 
 # OCI API key (created by CI)
