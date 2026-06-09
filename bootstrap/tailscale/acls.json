@@ -1,0 +1,45 @@
+{
+  "acls": [
+    {
+      "action": "accept",
+      "src": ["autogroup:member"],
+      "dst": ["autogroup:member:*"]
+    },
+    {
+      "action": "accept",
+      "src": ["tag:k3s-agent"],
+      "dst": ["tag:k3s-server:6443"]
+    },
+    {
+      "action": "accept",
+      "src": ["tag:k3s-server"],
+      "dst": ["tag:k3s-agent:*"]
+    },
+    {
+      "action": "accept",
+      "src": ["tag:k3s-server"],
+      "dst": ["tag:k3s-agent:10250"]
+    },
+    {
+      "action": "accept",
+      "src": ["autogroup:member"],
+      "dst": ["tag:k3s-server:6443", "tag:k3s-server:8472", "tag:k3s-server:10250"]
+    },
+    {
+      "action": "accept",
+      "src": ["tag:admin"],
+      "dst": ["autogroup:member:22"]
+    }
+  ],
+  "tagOwners": {
+    "tag:k3s-server": ["autogroup:member"],
+    "tag:k3s-agent": ["autogroup:member"],
+    "tag:admin": ["autogroup:member"]
+  },
+  "autoApprovers": {
+    "routes": {
+      "192.168.1.0/24": ["autogroup:member"],
+      "10.0.0.0/16": ["autogroup:member"]
+    }
+  }
+}

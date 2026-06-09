@@ -1,0 +1,134 @@
+# RBAC: cloudflared needs to read its config and report metrics.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloudflared
+  namespace: cloudflare
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cloudflared
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "namespaces"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["replicasets"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cloudflared
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cloudflared
+subjects:
+- kind: ServiceAccount
+  name: cloudflared
+  namespace: cloudflare
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: cloudflare
+data:
+  # Empty ingress: real ingress rules live in Cloudflare, managed by Terraform.
+  config.yaml: |
+    tunnel: REPLACE_WITH_TUNNEL_ID_OR_NAME
+    metrics: 0.0.0.0:2000
+    no-autoupdate: true
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cloudflared
+  namespace: cloudflare
+  labels:
+    app: cloudflared
+spec:
+  selector:
+    matchLabels:
+      app: cloudflared
+  template:
+    metadata:
+      labels:
+        app: cloudflared
+    spec:
+      serviceAccountName: cloudflared
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - operator: Exists
+      containers:
+      - name: cloudflared
+        image: cloudflare/cloudflared:2024.12.2
+        args:
+        - tunnel
+        - --no-autoupdate
+        - --config
+        - /etc/cloudflared/config/config.yaml
+        - run
+        env:
+        - name: TUNNEL_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: tunnel-credentials
+              key: token
+        livenessProbe:
+          httpGet:
+            path: /ready
+            port: 2000
+          failureThreshold: 1
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 2000
+          failureThreshold: 1
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65532
+        volumeMounts:
+        - name: config
+          mountPath: /etc/cloudflared/config
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: config
+        configMap:
+          name: cloudflared-config
+      - name: tmp
+        emptyDir: {}
+      priorityClassName: system-node-critical
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudflared-metrics
+  namespace: cloudflare
+  labels:
+    app: cloudflared
+spec:
+  selector:
+    app: cloudflared
+  ports:
+  - name: metrics
+    port: 2000
+    targetPort: 2000

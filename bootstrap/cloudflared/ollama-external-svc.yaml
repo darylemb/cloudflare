@@ -1,0 +1,46 @@
+# Ollama runs directly on the Mac Mini host (not in a container) so it can use
+# Metal/MLX. This Service points the cluster at the host's loopback.
+#
+# Adjust `host.docker.internal` if your k3s uses something else, or use the
+# Mac Mini's Tailscale IP (e.g. 100.64.0.2) for portability.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: ai
+  labels:
+    app: ollama
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 11434
+    targetPort: 11434
+    protocol: TCP
+---
+# Headless service used to pin the LLM workload to the Mac Mini node.
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: ollama
+  namespace: ai
+subsets:
+- addresses:
+  - ip: 100.64.0.2   # Tailscale IP of the Mac Mini
+  ports:
+  - name: http
+    port: 11434
+    protocol: TCP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ollama-models
+  namespace: ai
+data:
+  # Place the qwen3.5 model here when you pull it: ollama pull qwen3.5:4b
+  README.md: |
+    Pull the model on the Mac Mini:
+      ollama pull qwen3.5:4b
+    The Service above points to the host's :11434 where Ollama is listening.

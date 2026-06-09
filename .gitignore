@@ -1,0 +1,20 @@
+# Local Terraform state
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# tfvars with secrets (keep .example checked in)
+terraform.tfvars
+services.tfvars
+backend.tfvars
+
+# OCI API key (created by CI)
+oci_api_key.pem
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
