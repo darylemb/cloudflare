@@ -38,8 +38,10 @@ jobs:
           echo "${{ secrets.OCI_API_PRIVATE_KEY }}" > ~/.oci/oci_api_key.pem
           chmod 600 ~/.oci/oci_api_key.pem
 
-      # Backend config is written from secrets. The var files
-      # (services.tfvars, terraform.tfvars) are committed to the repo.
+      # Backend config is written from secrets. The OCI backend reads
+      # tenancy/user/fingerprint from the OCI SDK config (~/.oci/config
+      # + ~/.oci/oci_api_key.pem) so those values only need to be there,
+      # not in the backend config.
       - name: 'Write backend.tfvars'
         run: |
           cat > backend.tfvars <<EOF
@@ -47,9 +49,6 @@ jobs:
           namespace   = "${{ secrets.BACKEND_NAMESPACE }}"
           key         = "cloudflare/terraform.tfstate"
           region      = "${{ secrets.BACKEND_REGION }}"
-          tenancy     = "${{ secrets.OCI_TENANCY_OCID }}"
-          user        = "${{ secrets.OCI_USER_OCID }}"
-          fingerprint = "${{ secrets.OCI_FINGERPRINT }}"
           EOF
 
       - name: Terraform Init
@@ -118,9 +117,6 @@ jobs:
           namespace   = "${{ secrets.BACKEND_NAMESPACE }}"
           key         = "cloudflare/terraform.tfstate"
           region      = "${{ secrets.BACKEND_REGION }}"
-          tenancy     = "${{ secrets.OCI_TENANCY_OCID }}"
-          user        = "${{ secrets.OCI_USER_OCID }}"
-          fingerprint = "${{ secrets.OCI_FINGERPRINT }}"
           EOF
 
       - name: Terraform Init
