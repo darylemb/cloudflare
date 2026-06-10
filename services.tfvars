@@ -30,8 +30,14 @@ services = {
   }
 
   argocd = {
-    hostname    = "argocd.darylm.xyz"
+    hostname    = "argo.darylm.xyz"
     service_url = "http://argocd-server.argocd.svc.cluster.local:80"
+    public      = false
+  }
+
+  uptime = {
+    hostname    = "uptime.darylm.xyz"
+    service_url = "http://uptime-kuma.monitoring.svc.cluster.local:3001"
     public      = false
   }
 
