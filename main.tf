@@ -4,6 +4,10 @@ resource "random_id" "tunnel_secret" {
 
 data "cloudflare_ip_ranges" "cloudflare" {}
 
+# Cloudflare Tunnel — kept as a resource so we have the credentials and can
+# route to it in the future (e.g. for non-HTTP services or to hide IPs).
+# Currently we use DNS A records for HTTP because CNAMEs to cf.argotunnel.com
+# trigger error 1014 (CNAME Cross-User Banned) on the Free plan.
 resource "cloudflare_zero_trust_tunnel_cloudflared" "k3s" {
   account_id    = var.cloudflare_account_id
   name          = var.tunnel_name
@@ -11,6 +15,9 @@ resource "cloudflare_zero_trust_tunnel_cloudflared" "k3s" {
   config_src    = "cloudflare"
 }
 
+# Optional tunnel config (used when cloudflared is running somewhere).
+# Even with the A-record DNS approach, having the tunnel defined lets us
+# enable cloudflared on individual nodes later without redoing the Terraform.
 resource "cloudflare_zero_trust_tunnel_cloudflared_config" "k3s" {
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.k3s.id
   account_id = var.cloudflare_account_id
@@ -30,16 +37,21 @@ data "cloudflare_zero_trust_tunnel_cloudflared_token" "k3s" {
   account_id = var.cloudflare_account_id
 }
 
+variable "oci_load_balancer_ip" {
+  description = "Public IP of the OCI load balancer (used for DNS A records)."
+  type        = string
+}
+
 resource "cloudflare_dns_record" "services" {
   for_each = var.services
 
   zone_id = local.zone_id
   name    = each.value.hostname
-  type    = "CNAME"
-  content = "${cloudflare_zero_trust_tunnel_cloudflared.k3s.id}.cf.argotunnel.com"
+  type    = "A"
+  content = var.oci_load_balancer_ip
   proxied = true
   ttl     = 1
-  comment = "Tunnel route for ${each.key} via ${var.tunnel_name}"
+  comment = "Route for ${each.key} via OCI LB (A record)"
 }
 
 resource "cloudflare_zero_trust_access_application" "services" {
@@ -56,13 +68,6 @@ resource "cloudflare_zero_trust_access_application" "services" {
   # Inline policies (provider v5 requires policies inside the application
   # resource, not as separate cloudflare_zero_trust_access_policy resources
   # — those don't have an application_id field and end up orphaned).
-  #
-  # Access policy precedence:
-  #   1. If access_allow_emails is set, allow only those emails (strictest).
-  #      We use email_domain matching for robustness against IdP case
-  #      normalisation and aliased addresses.
-  #   2. Otherwise, allow anyone who has authenticated through any IdP
-  #      (gated by the Access login screen — they still need to log in).
   policies = length(var.access_allow_emails) > 0 ? [
     {
       name       = "policy-${each.key}"

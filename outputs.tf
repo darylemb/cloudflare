@@ -1,16 +1,17 @@
 output "tunnel_id" {
-  description = "Cloudflare Tunnel ID"
+  description = "Cloudflare Tunnel ID (kept for future use; current DNS uses A records)"
   value       = cloudflare_zero_trust_tunnel_cloudflared.k3s.id
-}
-
-output "tunnel_cname_target" {
-  description = "CNAME target for DNS records pointing at the tunnel"
-  value       = "${cloudflare_zero_trust_tunnel_cloudflared.k3s.id}.cf.argotunnel.com"
 }
 
 output "tunnel_token" {
   description = "Token for the cloudflared DaemonSet. Pass to k3s as a Secret."
   value       = data.cloudflare_zero_trust_tunnel_cloudflared_token.k3s.token
+  sensitive   = true
+}
+
+output "oci_load_balancer_ip" {
+  description = "OCI LB public IP that A records point to"
+  value       = var.oci_load_balancer_ip
   sensitive   = true
 }
 
