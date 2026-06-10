@@ -65,16 +65,13 @@ resource "cloudflare_zero_trust_access_policy" "services" {
 
   # Access policy precedence:
   #   1. If access_allow_emails is set, allow only those emails (strictest).
-  #   2. Otherwise, if a Google IdP is configured, allow any validated
-  #      Google account (gmail, google workspace, etc.).
-  #   3. Otherwise, allow everyone (still gated by Access login).
+  #   2. Otherwise, allow anyone who has authenticated through any IdP
+  #      (gated by the Access login screen — they still need to log in).
+  # Use email_domain (more robust than literal email match — the IdP may
+  # normalise case or include aliases that wouldn't match a literal string).
   include = length(var.access_allow_emails) > 0 ? [
     for email in var.access_allow_emails : {
-      email = { email = email }
-    }
-    ] : var.google_oauth_client_id != null ? [
-    {
-      everyone_validated = {}
+      email_domain = { domain = split("@", email)[1] }
     }
     ] : [
     {
