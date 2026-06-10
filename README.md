@@ -143,6 +143,8 @@ diff, merge, apply.
 | `BACKEND_BUCKET` | `bucket-darylemb-20260125`. |
 | `BACKEND_NAMESPACE` | `idkw4f4zgz2v`. |
 | `BACKEND_REGION` | `us-ashburn-1`. |
+| `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth Client ID (from Google Cloud Console). Optional; if set, Access uses Google login instead of email OTP. |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth Client Secret. Required if `GOOGLE_OAUTH_CLIENT_ID` is set. |
 
 ---
 

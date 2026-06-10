@@ -63,9 +63,17 @@ resource "cloudflare_zero_trust_access_policy" "services" {
   name       = "policy-${each.key}"
   decision   = "allow"
 
-  include = [{
-    everyone = {}
-  }]
+  # If a Google IdP is configured and access_allow_emails is set, restrict
+  # to those emails. Otherwise allow everyone (still gated by Access login).
+  include = length(var.access_allow_emails) > 0 ? [
+    for email in var.access_allow_emails : {
+      email = { email = email }
+    }
+    ] : [
+    {
+      everyone = {}
+    }
+  ]
 
   depends_on = [cloudflare_zero_trust_access_application.services]
 }
