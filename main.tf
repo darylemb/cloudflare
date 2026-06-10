@@ -52,34 +52,40 @@ resource "cloudflare_zero_trust_access_application" "services" {
   domain           = each.value.hostname
   type             = "self_hosted"
   session_duration = var.access_session_duration
-}
 
-resource "cloudflare_zero_trust_access_policy" "services" {
-  for_each = {
-    for k, v in var.services : k => v if !v.public
-  }
-
-  account_id = var.cloudflare_account_id
-  name       = "policy-${each.key}"
-  decision   = "allow"
-
+  # Inline policies (provider v5 requires policies inside the application
+  # resource, not as separate cloudflare_zero_trust_access_policy resources
+  # — those don't have an application_id field and end up orphaned).
+  #
   # Access policy precedence:
   #   1. If access_allow_emails is set, allow only those emails (strictest).
+  #      We use email_domain matching for robustness against IdP case
+  #      normalisation and aliased addresses.
   #   2. Otherwise, allow anyone who has authenticated through any IdP
   #      (gated by the Access login screen — they still need to log in).
-  # Use email_domain (more robust than literal email match — the IdP may
-  # normalise case or include aliases that wouldn't match a literal string).
-  include = length(var.access_allow_emails) > 0 ? [
-    for email in var.access_allow_emails : {
-      email_domain = { domain = split("@", email)[1] }
+  policies = length(var.access_allow_emails) > 0 ? [
+    {
+      name       = "policy-${each.key}"
+      decision   = "allow"
+      precedence = 1
+      include = [
+        for email in var.access_allow_emails : {
+          email_domain = { domain = split("@", email)[1] }
+        }
+      ]
     }
     ] : [
     {
-      everyone = {}
+      name       = "policy-${each.key}"
+      decision   = "allow"
+      precedence = 1
+      include = [
+        {
+          everyone = {}
+        }
+      ]
     }
   ]
-
-  depends_on = [cloudflare_zero_trust_access_application.services]
 }
 
 resource "cloudflare_zero_trust_access_identity_provider" "google" {
