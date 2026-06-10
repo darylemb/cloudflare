@@ -71,7 +71,7 @@ resource "cloudflare_zero_trust_access_policy" "services" {
 }
 
 resource "cloudflare_zero_trust_access_identity_provider" "google" {
-  count = length(var.google_oauth_client_id) > 0 ? 1 : 0
+  count = var.google_oauth_client_id != null ? 1 : 0
 
   account_id = var.cloudflare_account_id
   name       = "google-oauth"

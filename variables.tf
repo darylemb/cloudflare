@@ -57,3 +57,9 @@ variable "services" {
   }))
   default = {}
 }
+
+variable "zone_name" {
+  description = "DNS zone name (e.g. darylm.xyz). Kept here so it can be referenced in services.tfvars."
+  type        = string
+  default     = "darylm.xyz"
+}
