@@ -9,6 +9,12 @@ zone_name = "darylm.xyz"
 #   Rocky    = Coolify + home apps
 #   Mac Mini = Ollama (qwen3.5:4b MLX) + ML workloads
 
+# Emails allowed to log in to non-public services. If empty, any validated
+# Google account can log in (when the Google IdP is configured).
+access_allow_emails = [
+  "darylemb@gmail.com",
+]
+
 services = {
   # ---- OCI VM (prefers to run here) ----
   grafana = {

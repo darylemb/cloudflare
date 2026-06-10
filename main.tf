@@ -63,11 +63,18 @@ resource "cloudflare_zero_trust_access_policy" "services" {
   name       = "policy-${each.key}"
   decision   = "allow"
 
-  # If a Google IdP is configured and access_allow_emails is set, restrict
-  # to those emails. Otherwise allow everyone (still gated by Access login).
+  # Access policy precedence:
+  #   1. If access_allow_emails is set, allow only those emails (strictest).
+  #   2. Otherwise, if a Google IdP is configured, allow any validated
+  #      Google account (gmail, google workspace, etc.).
+  #   3. Otherwise, allow everyone (still gated by Access login).
   include = length(var.access_allow_emails) > 0 ? [
     for email in var.access_allow_emails : {
       email = { email = email }
+    }
+    ] : var.google_oauth_client_id != null ? [
+    {
+      everyone_validated = {}
     }
     ] : [
     {
