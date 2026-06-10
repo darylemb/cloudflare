@@ -134,6 +134,25 @@ jobs:
       - name: Terraform Init
         run: terraform init -backend-config=backend.tfvars
 
+      # Import any DNS records that already exist in Cloudflare so Terraform
+      # adopts them instead of trying to create duplicates.
+      - name: 'Import existing DNS records'
+        run: |
+          set +e
+          for host in grafana.darylm.xyz argocd.darylm.xyz prometheus.darylm.xyz \
+                      coolify.darylm.xyz llm.darylm.xyz chat.darylm.xyz; do
+            key=$(echo "$host" | cut -d. -f1)
+            record_id=$(curl -s -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+              "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/dns_records?name=$host&type=CNAME" \
+              | jq -r '.result[0].id // empty')
+            if [ -n "$record_id" ]; then
+              echo "Importing $host (record id $record_id)..."
+              terraform import -input=false -var-file=services.tfvars -var-file=terraform.tfvars \
+                "cloudflare_dns_record.services[\"$key\"]" \
+                "${{ secrets.CLOUDFLARE_ZONE_ID }}/$record_id" || true
+            fi
+          done
+
       - name: Terraform Apply
         run: terraform apply -auto-approve -input=false -var-file=services.tfvars -var-file=terraform.tfvars
         env:
