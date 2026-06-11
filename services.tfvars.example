@@ -1,13 +1,22 @@
 zone_name = "darylm.xyz"
 
-# All services below are exposed via the Cloudflare Tunnel that runs as a
-# DaemonSet in the k3s cluster. Each service_url must resolve from inside
-# the cluster (Service ClusterIP, ExternalName, or Endpoints).
+# All services below are exposed via Cloudflare proxy + OCI Load Balancer.
+# Each hostname has an A record pointing at oci_load_balancer_ip (set in
+# terraform.tfvars), proxied=true. Cloudflare edge terminates TLS, Access
+# enforces auth, and the OCI LB (k3s-public-lb) does TCP passthrough to
+# the k3s nodes on 10.0.0.165:80/:443 where Traefik routes to the
+# in-cluster services.
 #
 # Topology:
 #   OCI VM   = control plane, MySQL, monitoring (24/7)
-#   Rocky    = Coolify + home apps
-#   Mac Mini = Ollama (qwen3.5:4b MLX) + ML workloads
+#   Rocky    = standby (rejoin when needed)
+#   Mac Mini = planned (Ollama/MLX)
+
+# Emails allowed to log in to non-public services. If empty, any validated
+# Google account can log in (when the Google IdP is configured).
+access_allow_emails = [
+  "darylemb@gmail.com",
+]
 
 services = {
   # ---- OCI VM (prefers to run here) ----
@@ -23,9 +32,15 @@ services = {
     public      = false
   }
 
-  argocd = {
-    hostname    = "argocd.darylm.xyz"
+  argo = {
+    hostname    = "argo.darylm.xyz"
     service_url = "http://argocd-server.argocd.svc.cluster.local:80"
+    public      = false
+  }
+
+  uptime = {
+    hostname    = "uptime.darylm.xyz"
+    service_url = "http://uptime-kuma.monitoring.svc.cluster.local:3001"
     public      = false
   }
 
